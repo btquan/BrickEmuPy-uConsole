@@ -8,7 +8,9 @@ from handheld.controls_panel import ControlsPanel
 from handheld.fps_counter import FpsCounter
 from handheld.metadata import game_name, game_group
 
-PANEL_WIDTH = 220
+# Column stretch: side panels : game : side panels
+SIDE_STRETCH = 1
+GAME_STRETCH = 2
 
 
 class GameScreen(QtWidgets.QWidget):
@@ -16,15 +18,16 @@ class GameScreen(QtWidgets.QWidget):
         super().__init__(parent)
 
         self._info = InfoPanel()
-        self._info.setFixedWidth(PANEL_WIDTH)
         self._brick = BrickWidget(config, settings)
         self._controls = ControlsPanel(config)
-        self._controls.setFixedWidth(PANEL_WIDTH)
 
         layout = QtWidgets.QHBoxLayout(self)
-        layout.addWidget(self._info)
-        layout.addWidget(self._brick, 1)
-        layout.addWidget(self._controls)
+        layout.addWidget(self._info, SIDE_STRETCH)
+        layout.addWidget(self._brick, GAME_STRETCH)
+        layout.addWidget(self._controls, SIDE_STRETCH)
+
+        # Enlarge the game: fit to the LCD, cropping the plastic border.
+        self._brick.fitToScreen(True)
 
         self._info.set_game(game_name(config, brick_path), game_group(config))
 

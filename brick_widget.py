@@ -68,6 +68,7 @@ class BrickWidget(QtWidgets.QGraphicsView):
         self._motionBlur = DEFAULT_MOTION_BLUR
         self._ghostSegments = DEFAULT_GHOST_SEGMENTS
         self._shadow = DEFAULT_SHADOW
+        self._screenFit = False
 
         self._loadSettings()
 
@@ -168,6 +169,8 @@ class BrickWidget(QtWidgets.QGraphicsView):
         })
 
     def _saveSettings(self):
+        if (self._screenFit):
+            return
         self._settings.setValue("brick/" + self._config["id"] + "/scene_rect", self.mapToScene(self.viewport().rect()).boundingRect())
 
     def _soundProcess(self, channel, data, tick):
@@ -203,7 +206,33 @@ class BrickWidget(QtWidgets.QGraphicsView):
     def setSpeed(self):
         self._cmdQueue.put((CMD_SPEED, self.sender().checkedAction().property("factor")))
 
+    def fitToScreen(self, enabled=True):
+        # Handheld mode: fit to the LCD (segment bounding box), cropping the
+        # machine's plastic border so the screen fills the view. Opt-in; the
+        # desktop app never calls this and keeps its whole-face fit.
+        self._screenFit = enabled
+        if (enabled):
+            self._scene_rect = None
+        self._fitBrickInView()
+
+    def _screenRect(self):
+        if (not getattr(self, "_segments", None)):
+            return None
+        rect = None
+        for seg in self._segments:
+            r = seg[2].sceneBoundingRect()
+            rect = r if (rect is None) else rect.united(r)
+        if (rect is None or rect.isEmpty()):
+            return None
+        margin = max(rect.width(), rect.height()) * 0.06
+        return rect.adjusted(-margin, -margin, margin, margin)
+
     def _fitBrickInView(self):
+        if (self._screenFit):
+            rect = self._screenRect()
+            if (rect is not None):
+                self.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
+                return
         if (self._scene_rect is not None):
             self.fitInView(self._scene_rect, Qt.AspectRatioMode.KeepAspectRatio)
         else:
