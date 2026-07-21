@@ -69,6 +69,7 @@ class BrickWidget(QtWidgets.QGraphicsView):
         self._ghostSegments = DEFAULT_GHOST_SEGMENTS
         self._shadow = DEFAULT_SHADOW
         self._screenFit = False
+        self._lcdRect = None
 
         self._loadSettings()
 
@@ -216,6 +217,12 @@ class BrickWidget(QtWidgets.QGraphicsView):
         self._fitBrickInView()
 
     def _screenRect(self):
+        # Prefer the SVG's marked LCD region (crops cleanly to the screen).
+        if (self._lcdRect is not None and not self._lcdRect.isEmpty()):
+            rect = self._lcdRect
+            margin = max(rect.width(), rect.height()) * 0.03
+            return rect.adjusted(-margin, -margin, margin, margin)
+        # Fallback: bounding box of the lit segments.
         if (not getattr(self, "_segments", None)):
             return None
         rect = None
@@ -283,6 +290,14 @@ class BrickWidget(QtWidgets.QGraphicsView):
         faceRenderer = QtSvg.QSvgRenderer(faceSVG)
         if (not faceRenderer.isValid()):
             QMessageBox(parent=self, text="Error loading SVG file").exec()
+
+        # If the SVG marks the LCD screen region, remember it so handheld
+        # screen-fit can crop to just the display (dropping the plastic body).
+        self._lcdRect = None
+        for eid in ("display", "screen", "lcd"):
+            if (faceRenderer.elementExists(eid)):
+                self._lcdRect = faceRenderer.boundsOnElement(eid)
+                break
 
         body = QtSvgWidgets.QGraphicsSvgItem()
         body.setSharedRenderer(faceRenderer)
