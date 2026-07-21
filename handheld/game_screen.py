@@ -7,6 +7,8 @@ from handheld.info_panel import InfoPanel
 from handheld.controls_panel import ControlsPanel
 from handheld.fps_counter import FpsCounter
 from handheld.metadata import game_name, game_group
+from handheld.gamepad import GamepadReader
+from handheld.input_map import load_profile, resolve_role
 
 PANEL_WIDTH = 240
 DEFAULT_ASPECT = 0.75
@@ -16,9 +18,13 @@ class GameScreen(QtWidgets.QWidget):
     def __init__(self, config, brick_path, settings, parent=None):
         super().__init__(parent)
 
+        self._config = config
+        self._profile = load_profile()
+        self._heldRoles = {}          # game button name -> set of roles holding it
+
         self._info = InfoPanel()
         self._brick = BrickWidget(config, settings)
-        self._controls = ControlsPanel(config)
+        self._controls = ControlsPanel(config, self._profile)
 
         self._info.setFixedWidth(PANEL_WIDTH)
         self._controls.setFixedWidth(PANEL_WIDTH)
@@ -47,6 +53,11 @@ class GameScreen(QtWidgets.QWidget):
         self._fpsTimer.timeout.connect(self._sampleFps)
         self._fpsTimer.start(1000)
 
+        self._gamepad = GamepadReader(self._profile)
+        self._gamepad.rolePressed.connect(self._onRolePressed)
+        self._gamepad.roleReleased.connect(self._onRoleReleased)
+        self._gamepad.start()
+
         self._brick.setFocus()
 
     def resizeEvent(self, event):
@@ -58,7 +69,29 @@ class GameScreen(QtWidgets.QWidget):
     def _sampleFps(self):
         self._info.set_fps(self._fps.sample(time.monotonic()))
 
+    def _onRolePressed(self, role):
+        button = resolve_role(role, self._config, self._profile)
+        if button is None:
+            return
+        held = self._heldRoles.setdefault(button, set())
+        was_empty = not held
+        held.add(role)
+        if was_empty:
+            self._brick.pressButton(button)
+
+    def _onRoleReleased(self, role):
+        button = resolve_role(role, self._config, self._profile)
+        if button is None:
+            return
+        held = self._heldRoles.get(button)
+        if not held or role not in held:
+            return
+        held.discard(role)
+        if not held:
+            self._brick.releaseButton(button)
+
     def close(self):
+        self._gamepad.stop()
         self._fpsTimer.stop()
         self._brick.close()
         return super().close()

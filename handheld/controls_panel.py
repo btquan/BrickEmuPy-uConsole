@@ -1,15 +1,25 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt
 
-from handheld.controls import controls_legend
+from handheld.input_map import control_hints
+
+_ROLE_SYMBOL = {
+    "DPAD_LEFT": "◄", "DPAD_RIGHT": "►",
+    "DPAD_UP": "▲", "DPAD_DOWN": "▼",
+    "BTN_A": "A", "BTN_B": "B", "BTN_X": "X", "BTN_Y": "Y",
+    "BTN_START": "Start", "BTN_SELECT": "Select",
+}
 
 
 class ControlsPanel(QtWidgets.QWidget):
-    def __init__(self, config, parent=None):
+    def __init__(self, config, profile, parent=None):
         super().__init__(parent)
         layout = QtWidgets.QVBoxLayout(self)
-        for name, keys in controls_legend(config, lambda c: Qt.Key(c).name.removeprefix("Key_")):
-            label = QtWidgets.QLabel("%s: %s" % (name.removeprefix("btn") or name, keys))
+        for name, roles in control_hints(config, profile):
+            if not roles:
+                continue
+            symbols = " ".join(_ROLE_SYMBOL.get(r, r) for r in roles)
+            label = QtWidgets.QLabel(
+                "%s: %s" % (name.removeprefix("btn") or name, symbols))
             label.setObjectName("controlLabel")
             label.setWordWrap(True)
             layout.addWidget(label)
