@@ -46,6 +46,7 @@ class QueueReaderThread(QThread):
 class BrickWidget(QtWidgets.QGraphicsView):
     examineSignal = pyqtSignal(dict)
     connectionSignal = pyqtSignal(bytes)
+    frameRendered = pyqtSignal()
 
     def __init__(self, config, settings):
         super().__init__()
@@ -101,6 +102,7 @@ class BrickWidget(QtWidgets.QGraphicsView):
         op = msg[0]
         if (op == MSG_VRAM):
             self._renderVRAM(msg[1])
+            self.frameRendered.emit()
         elif (op == MSG_EXAMINE):
             self.examineSignal.emit(msg[1])
         elif (op == MSG_ERROR):
