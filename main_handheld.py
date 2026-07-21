@@ -1,23 +1,19 @@
 import sys
-import json
 import argparse
 
 from PyQt6 import QtWidgets, QtCore
 
 from handheld.window import HandheldWindow
+from handheld.game_catalog import scan_catalog, group_catalog
+
+ASSETS_DIR = "assets"
 
 
 def main():
     parser = argparse.ArgumentParser(description="BrickEmuPy handheld shell.")
-    parser.add_argument("-brick", required=True, help="Brick Game config (*.brick)")
+    parser.add_argument("-brick", required=False,
+                        help="Boot straight into this Brick Game config (*.brick)")
     args = parser.parse_args()
-
-    try:
-        with open(args.brick) as f:
-            config = json.load(f)
-    except (OSError, ValueError) as e:   # ValueError covers JSONDecodeError + UnicodeDecodeError
-        print("Cannot open brick config: %s" % e, file=sys.stderr)
-        return 2
 
     app = QtWidgets.QApplication(sys.argv)
     try:
@@ -27,7 +23,8 @@ def main():
         pass
 
     settings = QtCore.QSettings("azya", "BrickEmuPy")
-    window = HandheldWindow(config, args.brick, settings)
+    groups = group_catalog(scan_catalog(ASSETS_DIR))
+    window = HandheldWindow(groups, settings, initial_brick=args.brick)
     window.showFullScreen()
     return app.exec()
 
