@@ -52,6 +52,9 @@ class GameScreen(QtWidgets.QWidget):
         self._fpsTimer.timeout.connect(self._sampleFps)
         self._fpsTimer.start(1000)
 
+        # Forward focus to the brick so keyboard hot-keys reach it even when the
+        # window calls setFocus() on this container (e.g. after launch).
+        self.setFocusProxy(self._brick)
         self._brick.setFocus()
 
     def resizeEvent(self, event):

@@ -2,7 +2,7 @@ from PyQt6 import QtWidgets, QtCore, QtGui, QtSvg
 
 from handheld.launcher_selection import LauncherSelection, LEFT, RIGHT, UP, DOWN
 
-_THUMB_HEIGHT = 110
+_THUMB_HEIGHT = 92
 _ROLE_DIR = {"DPAD_LEFT": LEFT, "DPAD_RIGHT": RIGHT,
              "DPAD_UP": UP, "DPAD_DOWN": DOWN}
 _KEY_DIR = {
@@ -60,6 +60,8 @@ class LauncherScreen(QtWidgets.QWidget):
         self._rows = []       # per group -> QScrollArea
 
         outer = QtWidgets.QVBoxLayout(self)
+        outer.setContentsMargins(8, 4, 8, 4)
+        outer.setSpacing(2)
         if not self._groups:
             outer.addWidget(QtWidgets.QLabel("No games with ROMs found."))
             outer.addStretch(1)
