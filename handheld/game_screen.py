@@ -8,12 +8,8 @@ from handheld.controls_panel import ControlsPanel
 from handheld.fps_counter import FpsCounter
 from handheld.metadata import game_name, game_group
 
-# Column stretch: side panels : game : side panels
-SIDE_STRETCH = 1
-GAME_STRETCH = 2
-# Cap the side panels so a long control label can't steal the game's space and
-# push it off-centre; both capped equally keeps the game centred symmetrically.
-PANEL_MAX_WIDTH = 260
+PANEL_WIDTH = 240
+DEFAULT_ASPECT = 0.75
 
 
 class GameScreen(QtWidgets.QWidget):
@@ -24,16 +20,24 @@ class GameScreen(QtWidgets.QWidget):
         self._brick = BrickWidget(config, settings)
         self._controls = ControlsPanel(config)
 
-        self._info.setMaximumWidth(PANEL_MAX_WIDTH)
-        self._controls.setMaximumWidth(PANEL_MAX_WIDTH)
+        self._info.setFixedWidth(PANEL_WIDTH)
+        self._controls.setFixedWidth(PANEL_WIDTH)
 
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.addWidget(self._info, SIDE_STRETCH)
-        layout.addWidget(self._brick, GAME_STRETCH)
-        layout.addWidget(self._controls, SIDE_STRETCH)
-
-        # Enlarge the game: fit to the LCD, cropping the plastic border.
+        # Show only the LCD: fit to the segment/display region so the plastic
+        # body outside it is clipped by the (aspect-locked) view.
         self._brick.fitToScreen(True)
+        self._aspect = self._brick.contentAspect() or DEFAULT_ASPECT
+
+        # Panels pinned to the edges; the game sits centred between stretch
+        # spacers so its side margins are the dark app background, not plastic.
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self._info)
+        layout.addStretch(1)
+        layout.addWidget(self._brick)
+        layout.addStretch(1)
+        layout.addWidget(self._controls)
 
         self._info.set_game(game_name(config, brick_path), game_group(config))
 
@@ -44,6 +48,12 @@ class GameScreen(QtWidgets.QWidget):
         self._fpsTimer.start(1000)
 
         self._brick.setFocus()
+
+    def resizeEvent(self, event):
+        # Lock the game widget to the LCD aspect ratio at full height, so it
+        # stays LCD-shaped (no plastic in the letterbox margins).
+        self._brick.setFixedWidth(max(1, int(self.height() * self._aspect)))
+        return super().resizeEvent(event)
 
     def _sampleFps(self):
         self._info.set_fps(self._fps.sample(time.monotonic()))

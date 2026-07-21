@@ -227,6 +227,14 @@ class BrickWidget(QtWidgets.QGraphicsView):
         margin = max(rect.width(), rect.height()) * 0.06
         return rect.adjusted(-margin, -margin, margin, margin)
 
+    def contentAspect(self):
+        # width/height of the LCD region, so the handheld shell can lock the
+        # view to it and clip the machine's plastic body. None if unknown.
+        rect = self._screenRect()
+        if (rect is None or rect.height() <= 0):
+            return None
+        return rect.width() / rect.height()
+
     def _fitBrickInView(self):
         if (self._screenFit):
             rect = self._screenRect()

@@ -9,7 +9,7 @@ class ControlsPanel(QtWidgets.QWidget):
         super().__init__(parent)
         layout = QtWidgets.QVBoxLayout(self)
         for name, keys in controls_legend(config, lambda c: Qt.Key(c).name.removeprefix("Key_")):
-            label = QtWidgets.QLabel("%s: %s" % (name, keys))
+            label = QtWidgets.QLabel("%s: %s" % (name.removeprefix("btn") or name, keys))
             label.setObjectName("controlLabel")
             label.setWordWrap(True)
             layout.addWidget(label)
