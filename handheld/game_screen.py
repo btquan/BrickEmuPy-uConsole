@@ -11,6 +11,9 @@ from handheld.metadata import game_name, game_group
 # Column stretch: side panels : game : side panels
 SIDE_STRETCH = 1
 GAME_STRETCH = 2
+# Cap the side panels so a long control label can't steal the game's space and
+# push it off-centre; both capped equally keeps the game centred symmetrically.
+PANEL_MAX_WIDTH = 260
 
 
 class GameScreen(QtWidgets.QWidget):
@@ -20,6 +23,9 @@ class GameScreen(QtWidgets.QWidget):
         self._info = InfoPanel()
         self._brick = BrickWidget(config, settings)
         self._controls = ControlsPanel(config)
+
+        self._info.setMaximumWidth(PANEL_MAX_WIDTH)
+        self._controls.setMaximumWidth(PANEL_MAX_WIDTH)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.addWidget(self._info, SIDE_STRETCH)
