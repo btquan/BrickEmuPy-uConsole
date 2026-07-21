@@ -1,5 +1,7 @@
 import random, math
 
+import numpy as np
+
 from PyQt6.QtCore import QIODeviceBase, QByteArray, QIODevice
 from PyQt6.QtMultimedia import QAudioFormat, QAudioSink, QMediaDevices
 
@@ -103,20 +105,21 @@ class AudioData(QIODevice):
         bps = self._bytesPerSample
         channelCount = self._channelCount
         size = maxlen // (bps * channelCount)
-        
-        channel_data = []
+        if size <= 0:
+            return QByteArray()
+
+        # Mix + pack with numpy: identical output to the old per-sample loop, but
+        # vectorised so it's far faster AND releases the GIL during the array ops,
+        # so this (audio) thread stops starving against the busy GUI thread.
+        mixed = np.zeros(size, dtype=np.float64)
         for ch in self._channels.values():
-            channel_data.append(ch.get_channel_data(size))
-        
-        data = QByteArray()
-        for i in range(size):
-            mixed = 0
-            for ch in channel_data:
-                mixed += ch[i]
-            mixed = max(-SOUND_LEVEL, min(SOUND_LEVEL, int(mixed)))
-            data.append(mixed.to_bytes(bps, 'little', signed=True) * channelCount)
-        
-        return data
+            mixed += np.asarray(ch.get_channel_data(size), dtype=np.float64)
+
+        np.clip(mixed, -SOUND_LEVEL, SOUND_LEVEL, out=mixed)
+        samples = mixed.astype('<i2')            # int16, little-endian
+        if channelCount > 1:
+            samples = np.repeat(samples, channelCount)
+        return QByteArray(samples.tobytes())
 
     def bytesAvailable(self):
         return BUFFER_SIZE
