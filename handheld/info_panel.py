@@ -21,6 +21,9 @@ class InfoPanel(QtWidgets.QWidget):
         self._batteryTimer.start(5000)
         self._pollBattery()
 
+    def teardown(self):
+        self._batteryTimer.stop()
+
     def set_game(self, name, group):
         self._name.setText(name)
         self._group.setText(group)

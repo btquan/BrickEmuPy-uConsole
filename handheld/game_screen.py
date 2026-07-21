@@ -7,7 +7,6 @@ from handheld.info_panel import InfoPanel
 from handheld.controls_panel import ControlsPanel
 from handheld.fps_counter import FpsCounter
 from handheld.metadata import game_name, game_group
-from handheld.gamepad import GamepadReader
 from handheld.input_map import load_profile, resolve_role
 
 PANEL_WIDTH = 240
@@ -53,11 +52,6 @@ class GameScreen(QtWidgets.QWidget):
         self._fpsTimer.timeout.connect(self._sampleFps)
         self._fpsTimer.start(1000)
 
-        self._gamepad = GamepadReader(self._profile)
-        self._gamepad.rolePressed.connect(self._onRolePressed)
-        self._gamepad.roleReleased.connect(self._onRoleReleased)
-        self._gamepad.start()
-
         self._brick.setFocus()
 
     def resizeEvent(self, event):
@@ -69,7 +63,7 @@ class GameScreen(QtWidgets.QWidget):
     def _sampleFps(self):
         self._info.set_fps(self._fps.sample(time.monotonic()))
 
-    def _onRolePressed(self, role):
+    def handleRolePressed(self, role):
         button = resolve_role(role, self._config, self._profile)
         if button is None:
             return
@@ -79,7 +73,7 @@ class GameScreen(QtWidgets.QWidget):
         if was_empty:
             self._brick.pressButton(button)
 
-    def _onRoleReleased(self, role):
+    def handleRoleReleased(self, role):
         button = resolve_role(role, self._config, self._profile)
         if button is None:
             return
@@ -90,8 +84,11 @@ class GameScreen(QtWidgets.QWidget):
         if not held:
             self._brick.releaseButton(button)
 
-    def close(self):
-        self._gamepad.stop()
+    def teardown(self):
         self._fpsTimer.stop()
+        self._info.teardown()
         self._brick.close()
+
+    def close(self):
+        self.teardown()
         return super().close()
