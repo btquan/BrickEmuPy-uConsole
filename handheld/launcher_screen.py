@@ -51,6 +51,9 @@ class LauncherScreen(QtWidgets.QWidget):
 
     def __init__(self, groups, parent=None):
         super().__init__(parent)
+        # A plain QWidget defaults to NoFocus, so setFocus() would not deliver
+        # key events here; StrongFocus lets keyboard arrows/Enter reach us.
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         self.setStyleSheet(
             'QWidget#launcherTile[selected="true"] '
             '{ border: 3px solid palette(highlight); border-radius: 6px; }')
