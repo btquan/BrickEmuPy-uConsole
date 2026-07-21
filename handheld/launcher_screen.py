@@ -105,6 +105,7 @@ class LauncherScreen(QtWidgets.QWidget):
             tile.setProperty("selected", tg == g and ti == i)
             tile.style().unpolish(tile)
             tile.style().polish(tile)
+            tile.update()      # re-polish alone doesn't repaint on a live display
         sel = self._tiles.get((g, i))
         if sel is not None and 0 <= g < len(self._rows):
             self._rows[g].ensureWidgetVisible(sel)
