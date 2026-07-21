@@ -83,6 +83,13 @@ class HandheldWindow(QtWidgets.QMainWindow):
         else:
             self.close()
 
+    def showEvent(self, event):
+        # setFocus() during __init__ (before the window is visible) doesn't
+        # stick; focus the current screen once we're actually shown so keyboard
+        # navigation works.
+        super().showEvent(event)
+        self._stack.currentWidget().setFocus()
+
     def closeEvent(self, event):
         self._gamepad.stop()
         if self._game is not None:

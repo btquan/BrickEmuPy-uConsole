@@ -77,6 +77,9 @@ class LauncherScreen(QtWidgets.QWidget):
 
             row_area = QtWidgets.QScrollArea()
             row_area.setWidgetResizable(True)
+            # Don't let the scroll areas grab keyboard focus / arrow keys —
+            # keep focus (and arrow navigation) on the LauncherScreen itself.
+            row_area.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
             row_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
             row_area.setVerticalScrollBarPolicy(
                 QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
