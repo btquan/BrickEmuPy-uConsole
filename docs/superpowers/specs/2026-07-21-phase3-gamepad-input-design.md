@@ -166,6 +166,15 @@ js0 8-byte event
 - Multiple roles → same button (e.g. A and B → btnRotate): reference-count
   presses so releasing one held button doesn't cancel another still held.
 
+**Known limitation:** the keyboard path (`BrickWidget.keyPressEvent`) and the
+gamepad path (`GameScreen._heldRoles`) are independent — the emulator's per-button
+input is a boolean, not a counter. If a key and a gamepad role drove the *same*
+game button at once, one path's release could turn the button off while the other
+still holds it. This cannot happen on the uConsole because the QMK firmware makes
+Game Mode (js0 events) and keyboard mode mutually exclusive, so the two paths are
+never live simultaneously. A future refactor must not merge the two paths without
+sharing the reference count.
+
 ## 11. Testing
 
 - **Pure (run anywhere):** `parse_js_event` (button/axis/init framing);
