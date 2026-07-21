@@ -15,7 +15,7 @@ def main():
     try:
         with open(args.brick) as f:
             config = json.load(f)
-    except (OSError, json.JSONDecodeError) as e:
+    except (OSError, ValueError) as e:   # ValueError covers JSONDecodeError + UnicodeDecodeError
         print("Cannot open brick config: %s" % e, file=sys.stderr)
         return 2
 
