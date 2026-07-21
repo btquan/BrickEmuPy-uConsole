@@ -203,6 +203,12 @@ class BrickWidget(QtWidgets.QGraphicsView):
     def setBreakpoint(self, pc, add):
         self._cmdQueue.put((CMD_BREAKPOINT, pc, add))
 
+    def pressButton(self, name):
+        self._cmdQueue.put((CMD_BTN_PRESS, name))
+
+    def releaseButton(self, name):
+        self._cmdQueue.put((CMD_BTN_RELEASE, name))
+
     @pyqtSlot()
     def setSpeed(self):
         self._cmdQueue.put((CMD_SPEED, self.sender().checkedAction().property("factor")))
@@ -261,13 +267,13 @@ class BrickWidget(QtWidgets.QGraphicsView):
         if (not event.isAutoRepeat()):
             for name, value in self._config["buttons"].items():
                 if (event.key() in value["hot_keys"]):
-                    self._cmdQueue.put((CMD_BTN_PRESS, name))
+                    self.pressButton(name)
 
     def keyReleaseEvent(self, event):
         if (not event.isAutoRepeat()):
             for name, value in self._config["buttons"].items():
                 if (event.key() in value["hot_keys"]):
-                    self._cmdQueue.put((CMD_BTN_RELEASE, name))
+                    self.releaseButton(name)
 
     def wheelEvent(self, event):
         zoomFactor = 1.1
