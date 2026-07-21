@@ -1,0 +1,23 @@
+{
+  "buttons": {
+    "0": "BTN_A", "1": "BTN_B", "2": "BTN_X", "3": "BTN_Y",
+    "4": "BTN_SELECT", "5": "BTN_START"
+  },
+  "axes": {
+    "0": {"negative": "DPAD_LEFT", "positive": "DPAD_RIGHT"},
+    "1": {"negative": "DPAD_UP", "positive": "DPAD_DOWN"}
+  },
+  "axis_threshold": 16000,
+  "roles": {
+    "DPAD_LEFT": ["btnLeft"],
+    "DPAD_RIGHT": ["btnRight"],
+    "DPAD_DOWN": ["btnDown"],
+    "DPAD_UP": ["btnUp"],
+    "BTN_A": ["btnRotate"],
+    "BTN_B": ["btnRotate"],
+    "BTN_X": [],
+    "BTN_Y": [],
+    "BTN_START": ["btnStart"],
+    "BTN_SELECT": ["btnMute", "btnSelect"]
+  }
+}
