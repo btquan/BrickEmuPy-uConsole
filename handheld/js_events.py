@@ -31,3 +31,39 @@ def button_role(number, profile):
 def axis_roles(number, profile):
     entry = profile.get("axes", {}).get(str(number), {})
     return (entry.get("negative"), entry.get("positive"))
+
+
+class AxisTracker:
+    """Turns raw axis values into role press/release transitions.
+
+    Tracks, per axis, which direction (if any) is currently active, so a value
+    stream becomes discrete press/release events. Pure and deterministic.
+    """
+
+    def __init__(self, threshold):
+        self._threshold = threshold
+        self._active = {}   # axis number -> "negative" / "positive" / None
+
+    def feed(self, number, value, neg_role, pos_role):
+        if value <= -self._threshold:
+            direction = "negative"
+        elif value >= self._threshold:
+            direction = "positive"
+        else:
+            direction = None
+
+        prev = self._active.get(number)
+        if direction == prev:
+            return []
+        self._active[number] = direction
+
+        transitions = []
+        if prev == "negative" and neg_role:
+            transitions.append((neg_role, False))
+        elif prev == "positive" and pos_role:
+            transitions.append((pos_role, False))
+        if direction == "negative" and neg_role:
+            transitions.append((neg_role, True))
+        elif direction == "positive" and pos_role:
+            transitions.append((pos_role, True))
+        return transitions
