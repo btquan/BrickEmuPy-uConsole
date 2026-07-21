@@ -7,6 +7,7 @@ so the transport can be swapped without touching that code.
 import pickle
 import queue
 import struct
+import sys
 import threading
 
 _HEADER = struct.Struct("<I")   # 4-byte little-endian payload length
@@ -26,7 +27,13 @@ class FramedWriter:
         with self._lock:
             if self._closed:
                 return
-            self._f.write(frame)
+            # write() on a pipe can return fewer bytes than given once the
+            # payload exceeds the OS pipe buffer; loop until the whole frame
+            # is sent, mirroring the _read_exact loop on the read side.
+            view = memoryview(frame)
+            while view:
+                n = self._f.write(view)
+                view = view[n:]
             self._f.flush()
 
     def cancel_join_thread(self):
@@ -71,9 +78,17 @@ class FramedReader:
                 if payload is None:
                     break
                 self._q.put(pickle.loads(payload))
-        except Exception:
-            pass
+        except Exception as e:
+            # Not a clean EOF (that's handled by header/payload being None
+            # above) -- surface the corruption/decoding failure instead of
+            # silently hanging, since a bare pass here turns data corruption
+            # into an unexplained hang with no diagnostic.
+            print(f"FramedReader: stream error: {e!r}", file=sys.stderr)
         finally:
+            # Always enqueue EOF so blocked/future get() calls raise
+            # EOFError instead of hanging -- this mirrors the
+            # multiprocessing.Queue behavior where subprocess termination
+            # closes the pipe and the daemon reader thread exits on EOF.
             self._q.put(_EOF)
 
     def get(self, timeout=None):
