@@ -130,6 +130,7 @@ class BrickWidget(QtWidgets.QGraphicsView):
                     self._proc.wait(timeout=1.0)
                 except subprocess.TimeoutExpired:
                     self._proc.kill()
+                    self._proc.wait()
 
         if (getattr(self, "_config_path", None)):
             try:
