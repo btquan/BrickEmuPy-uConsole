@@ -1,5 +1,11 @@
 import queue
-import multiprocessing
+import os
+import json
+import tempfile
+import subprocess
+
+from ipc import FramedReader, FramedWriter
+from runtime import emulator_interpreter
 
 from PyQt6 import QtCore, QtGui, QtWidgets, QtSvgWidgets, QtSvg
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
@@ -29,6 +35,8 @@ class QueueReaderThread(QThread):
                 self.messageSignal.emit(self._dataQueue.get(timeout=0.1))
             except queue.Empty:
                 continue
+            except EOFError:
+                break
 
     def stop(self):
         self._running = False
@@ -69,19 +77,25 @@ class BrickWidget(QtWidgets.QGraphicsView):
         self._draw(config["face_path"])
 
     def _start_emulator(self):
-        self._cmdQueue = multiprocessing.Queue()
-        self._dataQueue = multiprocessing.Queue(maxsize=DATA_QUEUE_MAXSIZE)
+        fd, self._config_path = tempfile.mkstemp(suffix=".brickcfg.json")
+        with os.fdopen(fd, "w") as f:
+            json.dump(self._config, f)
+
+        repo_dir = os.path.dirname(os.path.abspath(__file__))
+        entry = os.path.join(repo_dir, "emulator_main.py")
+        self._proc = subprocess.Popen(
+            [emulator_interpreter(), entry, self._config_path],
+            cwd=repo_dir,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            bufsize=0,
+        )
+        self._cmdQueue = FramedWriter(self._proc.stdin)
+        self._dataQueue = FramedReader(self._proc.stdout, maxsize=DATA_QUEUE_MAXSIZE)
 
         self._QueueReaderThread = QueueReaderThread(self._dataQueue)
         self._QueueReaderThread.messageSignal.connect(self._processMessage)
         self._QueueReaderThread.start()
-
-        self._proc = multiprocessing.Process(
-            target=EmulatorProcess.spawn,
-            args=(self._config, self._cmdQueue, self._dataQueue),
-            daemon=False,
-        )
-        self._proc.start()
 
     def _processMessage(self, msg):
         op = msg[0]
@@ -103,12 +117,25 @@ class BrickWidget(QtWidgets.QGraphicsView):
             self._QueueReaderThread.stop()
             self._QueueReaderThread = None
 
-        if (self._proc and self._proc.is_alive()):
-            self._cmdQueue.put((CMD_QUIT,))
-            self._proc.join(timeout=1.0)
-            if (self._proc.is_alive()):
+        if (self._proc and self._proc.poll() is None):
+            try:
+                self._cmdQueue.put((CMD_QUIT,))
+            except Exception:
+                pass
+            try:
+                self._proc.wait(timeout=1.0)
+            except subprocess.TimeoutExpired:
                 self._proc.terminate()
-                self._proc.join()
+                try:
+                    self._proc.wait(timeout=1.0)
+                except subprocess.TimeoutExpired:
+                    self._proc.kill()
+
+        if (getattr(self, "_config_path", None)):
+            try:
+                os.remove(self._config_path)
+            except OSError:
+                pass
 
         self._saveSettings()
         super().close()
