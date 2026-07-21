@@ -132,6 +132,18 @@ class BrickWidget(QtWidgets.QGraphicsView):
                     self._proc.kill()
                     self._proc.wait()
 
+        if (getattr(self, "_cmdQueue", None)):
+            try:
+                self._cmdQueue.close()
+            except Exception:
+                pass
+
+        if (getattr(self, "_dataQueue", None)):
+            try:
+                self._dataQueue.close()
+            except Exception:
+                pass
+
         if (getattr(self, "_config_path", None)):
             try:
                 os.remove(self._config_path)

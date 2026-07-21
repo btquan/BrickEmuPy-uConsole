@@ -30,11 +30,20 @@ class FramedWriter:
             # write() on a pipe can return fewer bytes than given once the
             # payload exceeds the OS pipe buffer; loop until the whole frame
             # is sent, mirroring the _read_exact loop on the read side.
-            view = memoryview(frame)
-            while view:
-                n = self._f.write(view)
-                view = view[n:]
-            self._f.flush()
+            try:
+                view = memoryview(frame)
+                while view:
+                    n = self._f.write(view)
+                    view = view[n:]
+                self._f.flush()
+            except (BrokenPipeError, OSError, ValueError):
+                # The consumer (emulator subprocess) is gone -- the old
+                # multiprocessing.Queue.put() never raised in this
+                # situation, so degrade to a silent no-op instead of
+                # throwing BrokenPipeError into whatever called put()
+                # (e.g. a Qt slot wired via partial(self._cmdQueue.put, ...)).
+                self._closed = True
+                return
 
     def cancel_join_thread(self):
         pass

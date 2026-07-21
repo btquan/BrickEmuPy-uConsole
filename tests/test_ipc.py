@@ -89,3 +89,21 @@ def test_round_trip_payload_larger_than_pipe_buffer():
     assert reader.get(timeout=5.0) == payload
     reader.close()
     writer.close()
+
+
+def test_put_does_not_raise_on_dead_pipe():
+    # Mirrors the scenario where the emulator subprocess has died: the UI's
+    # FramedWriter still has the write end of the pipe open, but the read end
+    # is gone, so the kernel signals SIGPIPE/EPIPE on write. UI button
+    # presses are wired as partial(self._cmdQueue.put, ...) directly into Qt
+    # slots, so put() raising BrokenPipeError here would propagate straight
+    # into the Qt event loop. The old multiprocessing.Queue.put() never
+    # raised in this situation, so FramedWriter.put must degrade to a silent
+    # no-op instead, matching that behavior.
+    r_fd, w_fd = os.pipe()
+    writer = FramedWriter(os.fdopen(w_fd, "wb", buffering=0))
+    os.close(r_fd)  # kill the read end so writes fail
+    # Payload is larger than the OS pipe buffer to guarantee the underlying
+    # write() call actually attempts I/O (and hits BrokenPipeError) rather
+    # than being satisfied entirely by internal buffering.
+    writer.put((1, b"x" * 300_000))
